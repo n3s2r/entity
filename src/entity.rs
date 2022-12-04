@@ -93,19 +93,24 @@ mod tests {
     use super::*;
 
     #[derive(Debug, PartialEq, Eq)]
-    enum ObjectMsg {
+    enum ObjectMsgRequest {
+        Echo(String),
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    enum ObjectMsgResponse {
         Echo(String),
     }
 
     struct TestObject;
 
     impl RequestHandler for TestObject {
-        type Request = ObjectMsg;
-        type Response = ObjectMsg;
+        type Request = ObjectMsgRequest;
+        type Response = ObjectMsgResponse;
 
         fn handle_request(&mut self, request: Self::Request) -> Self::Response {
             match request {
-                ObjectMsg::Echo(s) => ObjectMsg::Echo(s),
+                ObjectMsgRequest::Echo(s) => ObjectMsgResponse::Echo(s),
             }
         }
     }
@@ -114,9 +119,9 @@ mod tests {
     async fn create_entity() {
         let connection = Entity::new(TestObject {}).listen();
         let answer = connection
-            .call_async(ObjectMsg::Echo("Hello".to_string()))
+            .call_async(ObjectMsgRequest::Echo("Hello".to_string()))
             .await
             .unwrap();
-        assert_eq!(answer, ObjectMsg::Echo("Hello".to_string()));
+        assert_eq!(answer, ObjectMsgResponse::Echo("Hello".to_string()));
     }
 }
