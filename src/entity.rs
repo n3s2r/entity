@@ -1,5 +1,7 @@
 use tokio::sync::{mpsc, oneshot};
 
+use crate::error::Error;
+
 enum RequestWrapper<Req, Resp> {
     WithResponse(Req, oneshot::Sender<Resp>),
     NoResponse(Req),
@@ -17,23 +19,23 @@ pub struct Connection<Req, Resp> {
 }
 
 impl<Req, Resp> Connection<Req, Resp> {
-    pub async fn call_async(&self, request: Req) -> Result<Resp, String> {
+    pub async fn call_async(&self, request: Req) -> Result<Resp, Error> {
         let (sender, receiver) = oneshot::channel();
         let request = RequestWrapper::WithResponse(request, sender);
-        self.sender.send(request).await.map_err(|e| {
-            eprintln!("Error sending request");
-            e.to_string()
-        })?;
+        self.sender
+            .send(request)
+            .await
+            .map_err(|_e| Error::RequestFailure)?;
 
-        receiver.await.map_err(|e| e.to_string())
+        receiver.await.map_err(|_e| Error::ResponseFailure)
     }
 
-    pub async fn call_async_no_response(&self, request: Req) -> Result<(), String> {
+    pub async fn call_async_no_response(&self, request: Req) -> Result<(), Error> {
         let request = RequestWrapper::NoResponse(request);
-        self.sender.send(request).await.map_err(|e| {
-            eprintln!("Error sending request");
-            e.to_string()
-        })?;
+        self.sender
+            .send(request)
+            .await
+            .map_err(|_e| Error::RequestFailure)?;
 
         Ok(())
     }
